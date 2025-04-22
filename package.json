@@ -1,0 +1,19 @@
+{
+  "name": "fullstack-backend",
+  "version": "1.0.0",
+  "description": "Backend for Project 1 with Swagger and Pagination",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "deploy": "pm2 start index.js --name backend",
+    "list": "pm2 list"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "mongoose": "^7.0.3",
+    "swagger-jsdoc": "^6.2.8",
+    "swagger-ui-express": "^4.6.3"
+  }
+}
