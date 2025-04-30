@@ -1,7 +1,8 @@
 const express = require('express');
 const router = express.Router();
-const User = require('../models/User');
 const { isValidId, validateUser } = require('../utils/validators');
+const { authenticate, authorizeAdmin } = require('../middlewares/authMiddleware');
+const userService = require('../services/userService');
 
 /**
  * @swagger
@@ -40,10 +41,10 @@ const { isValidId, validateUser } = require('../utils/validators');
  * @swagger
  * /api/users:
  *   get:
- *     summary: Get all users
+ *     summary: Get all approved users
  *     responses:
  *       200:
- *         description: List of all users
+ *         description: List of all approved users
  *       500:
  *         description: Server error
  *   post:
@@ -65,7 +66,7 @@ const { isValidId, validateUser } = require('../utils/validators');
  * @swagger
  * /api/users/{id}:
  *   get:
- *     summary: Get a user by ID
+ *     summary: Get an approved user by ID
  *     parameters:
  *       - in: path
  *         name: id
@@ -80,7 +81,7 @@ const { isValidId, validateUser } = require('../utils/validators');
  *             schema:
  *               $ref: '#/components/schemas/User'
  *       404:
- *         description: User not found
+ *         description: User not found or not approved
  *       400:
  *         description: Invalid ID format
  *   put:
@@ -117,9 +118,68 @@ const { isValidId, validateUser } = require('../utils/validators');
  *         description: User not found
  */
 
+/**
+ * @swagger
+ * /api/users/unapproved:
+ *   get:
+ *     summary: Get all unapproved users (Admin only)
+ *     security:
+ *       - cookieAuth: []
+ *     responses:
+ *       200:
+ *         description: List of unapproved users
+ *       403:
+ *         description: Admin access required
+ */
+
+/**
+ * @swagger
+ * /api/users/{id}/approve:
+ *   put:
+ *     summary: Approve a user (Admin only)
+ *     security:
+ *       - cookieAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: User approved successfully
+ *       403:
+ *         description: Admin access required
+ */
+
+// Protect all routes
+router.use(authenticate);
+
+// Admin routes
+router.get('/unapproved', authorizeAdmin, async (req, res) => {
+    try {
+        const users = await userService.getUnapprovedUsers();
+        res.json(users);
+    } catch (error) {
+        res.status(500).json({ error: 'Error fetching unapproved users' });
+    }
+});
+
+router.put('/:id/approve', authorizeAdmin, async (req, res) => {
+    try {
+        const user = await userService.approveUser(req.params.id);
+        if (!user) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+        res.json(user);
+    } catch (error) {
+        res.status(500).json({ error: 'Error approving user' });
+    }
+});
+
 router.get('/', async (req, res) => {
     try {
-        const users = await User.find();
+        const users = await userService.getAllUsers();
         res.json(users);
     } catch (error) {
         res.status(500).json({ error: 'Error fetching users' });
@@ -133,13 +193,12 @@ router.post('/', async (req, res) => {
             return res.status(400).json({ errors });
         }
 
-        const userExists = await User.findOne({ email: req.body.email });
+        const userExists = await userService.checkUserExists(req.body.email);
         if (userExists) {
             return res.status(400).json({ error: 'Email already registered' });
         }
 
-        const user = new User(req.body);
-        await user.save();
+        const user = await userService.createUser(req.body);
         res.status(201).json(user);
     } catch (error) {
         res.status(500).json({ error: 'Error creating user' });
@@ -152,9 +211,9 @@ router.get('/:id', async (req, res) => {
             return res.status(400).json({ error: 'Invalid ID format' });
         }
 
-        const user = await User.findById(req.params.id);
+        const user = await userService.getUserById(req.params.id);
         if (!user) {
-            return res.status(404).json({ error: 'User not found' });
+            return res.status(404).json({ error: 'User not found or not approved' });
         }
         res.json(user);
     } catch (error) {
@@ -173,7 +232,7 @@ router.put('/:id', async (req, res) => {
             return res.status(400).json({ errors });
         }
 
-        const user = await User.findByIdAndUpdate(req.params.id, req.body, { new: true });
+        const user = await userService.updateUser(req.params.id, req.body);
         if (!user) {
             return res.status(404).json({ error: 'User not found' });
         }
@@ -189,7 +248,7 @@ router.delete('/:id', async (req, res) => {
             return res.status(400).json({ error: 'Invalid ID format' });
         }
 
-        const user = await User.findByIdAndDelete(req.params.id);
+        const user = await userService.deleteUser(req.params.id);
         if (!user) {
             return res.status(404).json({ error: 'User not found' });
         }

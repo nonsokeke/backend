@@ -9,6 +9,8 @@ const validateUser = (user) => {
   if (!user.first_name) errors.push('First name is required');
   if (!user.last_name) errors.push('Last name is required');
   if (!user.year_graduated) errors.push('Graduation year is required');
+  if (!user.password) errors.push('Password is required');
+  if (user.password && user.password.length < 6) errors.push('Password must be at least 6 characters');
   return errors;
 };
 

@@ -115,14 +115,74 @@
  *         description: Invalid ID format
  */
 
+/**
+ * @swagger
+ * /api/opportunities/unapproved:
+ *   get:
+ *     summary: Get all unapproved opportunities (Admin only)
+ *     security:
+ *       - cookieAuth: []
+ *     responses:
+ *       200:
+ *         description: List of unapproved opportunities
+ *       403:
+ *         description: Admin access required
+ */
+
+/**
+ * @swagger
+ * /api/opportunities/{id}/approve:
+ *   put:
+ *     summary: Approve an opportunity (Admin only)
+ *     security:
+ *       - cookieAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Opportunity approved successfully
+ *       403:
+ *         description: Admin access required
+ */
+
 const express = require('express');
 const router = express.Router();
-const Opportunity = require('../models/Opportunity');
 const { isValidId, validateOpportunity } = require('../utils/validators');
+const { authenticate, authorizeAdmin } = require('../middlewares/authMiddleware');
+const opportunityService = require('../services/opportunityService');
+
+// Protect all routes
+router.use(authenticate);
+
+// Admin routes
+router.get('/unapproved', authorizeAdmin, async (req, res) => {
+    try {
+        const opportunities = await opportunityService.getUnapprovedOpportunities();
+        res.json(opportunities);
+    } catch (error) {
+        res.status(500).json({ error: 'Error fetching unapproved opportunities' });
+    }
+});
+
+router.put('/:id/approve', authorizeAdmin, async (req, res) => {
+    try {
+        const opportunity = await opportunityService.approveOpportunity(req.params.id, req.user.id);
+        if (!opportunity) {
+            return res.status(404).json({ error: 'Opportunity not found' });
+        }
+        res.json(opportunity);
+    } catch (error) {
+        res.status(500).json({ error: 'Error approving opportunity' });
+    }
+});
 
 router.get('/', async (req, res) => {
     try {
-        const opportunities = await Opportunity.find();
+        const opportunities = await opportunityService.getApprovedOpportunities();
         res.json(opportunities);
     } catch (error) {
         res.status(500).json({ error: 'Error fetching opportunities' });
@@ -136,8 +196,7 @@ router.post('/', async (req, res) => {
             return res.status(400).json({ errors });
         }
 
-        const opportunity = new Opportunity(req.body);
-        await opportunity.save();
+        const opportunity = await opportunityService.createOpportunity(req.body);
         res.status(201).json(opportunity);
     } catch (error) {
         res.status(500).json({ error: 'Error creating opportunity' });
@@ -150,9 +209,9 @@ router.get('/:id', async (req, res) => {
             return res.status(400).json({ error: 'Invalid ID format' });
         }
 
-        const opportunity = await Opportunity.findById(req.params.id);
+        const opportunity = await opportunityService.getOpportunityById(req.params.id);
         if (!opportunity) {
-            return res.status(404).json({ error: 'Opportunity not found' });
+            return res.status(404).json({ error: 'Opportunity not found or not approved' });
         }
         res.json(opportunity);
     } catch (error) {
@@ -171,7 +230,7 @@ router.put('/:id', async (req, res) => {
             return res.status(400).json({ errors });
         }
 
-        const opportunity = await Opportunity.findByIdAndUpdate(req.params.id, req.body, { new: true });
+        const opportunity = await opportunityService.updateOpportunity(req.params.id, req.body);
         if (!opportunity) {
             return res.status(404).json({ error: 'Opportunity not found' });
         }
@@ -187,7 +246,7 @@ router.delete('/:id', async (req, res) => {
             return res.status(400).json({ error: 'Invalid ID format' });
         }
 
-        const opportunity = await Opportunity.findByIdAndDelete(req.params.id);
+        const opportunity = await opportunityService.deleteOpportunity(req.params.id);
         if (!opportunity) {
             return res.status(404).json({ error: 'Opportunity not found' });
         }
