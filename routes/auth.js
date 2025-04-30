@@ -163,7 +163,7 @@ router.post('/login', async (req, res) => {
     });
 
     const { password: pwd, refreshToken, ...userWithoutSensitiveData } = user.toObject();
-    res.json(userWithoutSensitiveData);
+    res.json({ userWithoutSensitiveData, accessToken: tokens.accessToken, refreshToken: tokens.refreshToken });
   } catch (error) {
     res.status(500).json({ error: 'Error logging in' });
   }
