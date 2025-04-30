@@ -3,6 +3,8 @@ const cors = require('cors');
 const cookieParser = require('cookie-parser');
 const swaggerUi = require('swagger-ui-express');
 const swaggerJsDoc = require('swagger-jsdoc');
+const dotenv = require('dotenv');
+dotenv.config();
 
 const app = express();
 
@@ -23,7 +25,7 @@ const swaggerOptions = {
       version: "1.0.0",
       description: "API for users, majors, and opportunities"
     },
-    servers: [{ url: "http://localhost:5000" }],
+    servers: [{ url: `${process.env.SERVER_URL}` }],
     components: {
       securitySchemes: {
         cookieAuth: {
