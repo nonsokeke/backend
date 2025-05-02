@@ -10,6 +10,14 @@ class UserService {
     return await User.findOne({ _id: id, approved: true });
   }
 
+  async getUserByUsername(username) {
+    return await User.findOne({
+      user_name: username,
+      approved: true
+    });
+  }
+
+
   async createUser(userData) {
     const userExists = await User.findOne({ email: userData.email });
     if (userExists) {
@@ -33,6 +41,8 @@ class UserService {
   async approveUser(id) {
     return await User.findByIdAndUpdate(id, { approved: true }, { new: true });
   }
+
+
 }
 
 module.exports = new UserService();

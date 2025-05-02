@@ -117,6 +117,28 @@ const userService = require('../services/userService');
  *       404:
  *         description: User not found
  */
+/**
+* @swagger
+* /api/users/username/{username}:
+*   get:
+*     summary: Get a user by username
+*     parameters:
+*       - in: path
+*         name: username
+*         required: true
+*         schema:
+*           type: string
+*         description: Username of the user
+*     responses:
+*       200:
+*         description: User details
+*         content:
+*           application/json:
+*             schema:
+*               $ref: '#/components/schemas/User'
+*       404:
+*         description: User not found
+*/
 
 /**
  * @swagger
@@ -215,6 +237,21 @@ router.get('/:id', async (req, res) => {
         if (!user) {
             return res.status(404).json({ error: 'User not found or not approved' });
         }
+        res.json(user);
+    } catch (error) {
+        res.status(500).json({ error: 'Error fetching user' });
+    }
+});
+
+router.get('/username/:username', async (req, res) => {
+    try {
+        const username = req.params.username;
+        const user = await userService.getUserByUsername(username);
+
+        if (!user) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+
         res.json(user);
     } catch (error) {
         res.status(500).json({ error: 'Error fetching user' });
